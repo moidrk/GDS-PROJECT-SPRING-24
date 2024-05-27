@@ -110,7 +110,7 @@ GRAPH ANALYTICS:
    
    Description: Analyzes the degree distribution of suppliers, providing insights into their connectivity and relationships within the supply chain network.
 
-- Link Prediction
+- Link Prediction (Almost Implemented Some Bugs)
 // Create a projected graph containing only Supplier and Customer nodes
 CALL gds.graph.create('supplyChainGraph', ['Supplier', 'Customer'], {
   SUPPLIES: {
@@ -134,3 +134,22 @@ MATCH (s1)-[:SIMILARITY]->(s2)
 WHERE id(s1) < id(s2)
 RETURN s1, s2
 ORDER BY gds.util.asNode(s1).supplierName, gds.util.asNode(s2).supplierName;
+
+
+- Link Prediction for New Optimized Shipping Routes ( Working )
+MATCH (t:Transporter)-[DELIVERS]->(c:Customer)
+MATCH (s:Supplier)-[SHIPS]->(t)
+WHERE NOT (t)-[:SHIPS]->(:Supplier) // Exclude transporters delivering to suppliers
+MATCH (s)-[:LOCATED_IN]->(supplierLocation:Location)
+MATCH (c)-[:LOCATED_IN]->(customerLocation:Location)
+WHERE supplierLocation <> customerLocation // Ensure supplier is in a different location from the customer
+RETURN s, t, c, SHIPS.shippingCosts AS shippingCosts 
+ORDER BY shippingCosts ASC // Order by shipping costs for cost-effective routes
+LIMIT 10;
+- Some Betterments : 
+MATCH (s:Supplier), (p:Product), (c:Customer), (t:Transporter)
+WHERE s.stockLevels > 50  // Ensure supplier has sufficient stock levels
+AND c.numberSold > 100    // Consider customers with high purchase volumes
+AND t.shippingCosts < 500 // Prioritize transporters with lower shipping costs
+RETURN s.supplierName AS Supplier, p.productType AS Product, c.customerid AS Customer, t.carrier AS Transporter, t.shippingCosts AS ShippingCosts
+LIMIT 10; // Limit to top 10 predictions
